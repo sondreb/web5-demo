@@ -1,1 +1,22 @@
-<p>home works!</p>
+<div class="page">
+  <p>home works!</p>
+
+  <button mat-button (click)="generateDid()">Create a DID</button>
+
+
+  <mat-card class="example-card" *ngFor="let item of items">
+    <mat-card-header>
+      <div mat-card-avatar class="example-header-image"></div>
+      <mat-card-title>{{ item.title }}</mat-card-title>
+      <mat-card-subtitle>{{ item.abstract }}</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <p>
+        {{ item.content }}
+      </p>
+    </mat-card-content>
+    <mat-card-actions>
+      <button (click)="saveToWebNode(item)" mat-button>SAVE</button>
+    </mat-card-actions>
+  </mat-card>
+</div>
