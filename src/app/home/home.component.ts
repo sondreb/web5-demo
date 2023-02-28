@@ -7,6 +7,7 @@ import {
 } from '@tbd54566975/dwn-sdk-js';
 import { ApplicationService } from '../services/application.service';
 import { StorageService } from '../services/storage.service';
+import { v4 as uuidv4 } from 'uuid';
 
 @Component({
   selector: 'app-home',
@@ -68,18 +69,83 @@ export class HomeComponent {
   async callExtension() {
     const win = globalThis as any;
 
-    const result = await win.web5.dwn.processMessage({
-      method: 'RecordsQuery',
+    // const result = await win.web5.dwn.processMessage({
+    //   method: 'RecordsQuery',
+    //   message: {
+    //     filter: {
+    //       schema: 'http://some-schema-registry.org/todo',
+    //     },
+    //     dateSort: 'createdAscending',
+    //   },
+    // });
+
+    // console.log(result);
+    // if (result.status.code !== 200) {
+    //   console.error(
+    //     'Failed to fetch todos from DWN. check console for error:',
+    //     result
+    //   );
+    //   return;
+    // }
+
+    const todoData = {
+      completed: false,
+      description: 'Music',
+    };
+
+    // record is the DWeb message written to the DWN
+    const { record, result } = await win.web5.dwn.processMessage({
+      method: 'RecordsWrite',
+      data: todoData,
       message: {
-        filter: {
-          schema: 'http://some-schema-registry.org/todo',
-        },
-        dateSort: 'createdAscending',
+        schema: 'http://some-schema-registry.org/todo',
+        dataFormat: 'application/json',
+      },
+    });
+    console.log(result);
+
+    // const result = await win.web5.dwn.processMessage({
+    //   method: 'RecordsQuery',
+    //   message: {
+    //     filter: {
+    //       schema: 'http://some-schema-registry.org/todo',
+    //     },
+    //     dateSort: 'createdAscending',
+    //   },
+    // });
+  }
+
+  writeToDWN() {
+    const win = globalThis as any;
+    win.web5.dwn.processMessage({
+      method: 'CollectionsWrite',
+      data: {
+        id: uuidv4(),
+        description: 'Music',
+        completed: false,
       },
     });
   }
 
   saveToWebNode(item: any) {
     console.log('Save:', item);
+  }
+
+  async supportedDidMethods() {
+    const win = globalThis as any;
+    const methods = await win.web5.did.supportedMethods();
+    console.log('Methods:', methods);
+  }
+
+  async requestAccess() {
+    const win = globalThis as any;
+    const { isAllowed } = await win.web5.dwn.requestAccess();
+
+    if (!isAllowed) {
+      console.error('Permission not given!');
+      return;
+    }
+
+    console.log('Permission granted!');
   }
 }
