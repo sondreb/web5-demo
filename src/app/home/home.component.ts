@@ -9,6 +9,7 @@ import {
   ProtocolDefinition,
   ProtocolsConfigure,
   RecordsRead,
+  ProtocolsQuery,
 } from '@tbd54566975/dwn-sdk-js';
 import { ApplicationService } from '../services/application.service';
 import { StorageService } from '../services/storage.service';
@@ -135,15 +136,29 @@ export class HomeComponent {
 
     debugger;
 
-    const dataStream2 = undefined;
+    const emptyStream = undefined;
 
     const protocolWriteReply = await dwn.processMessage(
       didKey.did,
       protocolsConfigure.toJSON(),
-      dataStream2
+      emptyStream
     );
 
     console.log(protocolWriteReply);
+
+    const protocolQuery = await ProtocolsQuery.create({
+      filter: { protocol: 'notes-protocol' },
+      dateCreated: new Date().toString(),
+      authorizationSignatureInput: signatureMaterial,
+    });
+
+    const protocolQueryResult = await dwn.processMessage(
+      didKey.did,
+      protocolQuery.toJSON(),
+      emptyStream
+    );
+
+    console.log(protocolQueryResult);
 
     const dataStream = DataStream.fromBytes(data);
     const result = await dwn.processMessage(
@@ -182,6 +197,8 @@ export class HomeComponent {
 
     const readReply = await dwn.processMessage(didKey.did, recordsRead.message);
     console.log(readReply);
+
+    await dwn.close();
 
     // const queryQuery = await RecordsQuery.create({
     //   data,
