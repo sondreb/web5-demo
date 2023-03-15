@@ -147,5 +147,16 @@ export class HomeComponent {
     }
 
     console.log('Permission granted!');
+
+    const result = await win.web5.dwn.processMessage({
+      method: 'RecordsQuery',
+      message: {
+        filter: {
+          schema: 'http://some-schema-registry.org/todo',
+        },
+        dateSort: 'createdAscending',
+      },
+    });
+    console.log(result);
   }
 }
