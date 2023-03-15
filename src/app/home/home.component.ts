@@ -1,9 +1,15 @@
 import { Component } from '@angular/core';
 import {
+  Dwn,
   DataStream,
   DidKeyResolver,
   Jws,
   RecordsWrite,
+  RecordsQuery,
+  ProtocolDefinition,
+  ProtocolsConfigure,
+  RecordsRead,
+  ProtocolsQuery,
 } from '@tbd54566975/dwn-sdk-js';
 import { ApplicationService } from '../services/application.service';
 import { StorageService } from '../services/storage.service';
@@ -66,6 +72,144 @@ export class HomeComponent {
     console.log('Result:', result);
   }
 
+  async connect() {
+    const dwn = await Dwn.create();
+    const didKey = await DidKeyResolver.generate(); // generate a did:key DID
+    const signatureMaterial = Jws.createSignatureInput(didKey);
+    // const data = randomBytes(32); // in node.js
+    // or in web
+    const data = new Uint8Array(32);
+    window.crypto.getRandomValues(data);
+
+    debugger;
+
+    const protocol = 'notes-protocol';
+
+    const query = await RecordsWrite.create({
+      data,
+      dataFormat: 'application/json',
+      published: true,
+      protocol: protocol,
+      schema: 'notes',
+      authorizationSignatureInput: signatureMaterial,
+    });
+
+    debugger;
+
+    // write a protocol definition with an allow-anyone rule
+
+    const protocolDefinition: ProtocolDefinition = {
+      labels: {
+        notes: {
+          schema: 'notes',
+        },
+      },
+      records: {
+        notes: {
+          allow: {
+            anyone: {
+              to: ['write'],
+            },
+          },
+        },
+      },
+    };
+
+    // const alice = await TestDataGenerator.generatePersona();
+    // const bob = await TestDataGenerator.generatePersona();
+
+    const protocolsConfigure = await ProtocolsConfigure.create({
+      dateCreated: new Date().toString(),
+      protocol: protocol,
+      definition: protocolDefinition,
+      authorizationSignatureInput: signatureMaterial,
+    });
+
+    // const protocolsConfig = await TestDataGenerator.generateProtocolsConfigure({
+    //   requester: didKey.did,
+    //   protocol,
+    //   protocolDefinition,
+    // });
+
+    // setting up a stub DID resolver
+    // TestStubGenerator.stubDidResolver(didResolver, [alice, bob]);
+
+    debugger;
+
+    const emptyStream = undefined;
+
+    const protocolWriteReply = await dwn.processMessage(
+      didKey.did,
+      protocolsConfigure.toJSON(),
+      emptyStream
+    );
+
+    console.log(protocolWriteReply);
+
+    const protocolQuery = await ProtocolsQuery.create({
+      filter: { protocol: 'notes-protocol' },
+      dateCreated: new Date().toString(),
+      authorizationSignatureInput: signatureMaterial,
+    });
+
+    const protocolQueryResult = await dwn.processMessage(
+      didKey.did,
+      protocolQuery.toJSON(),
+      emptyStream
+    );
+
+    console.log(protocolQueryResult);
+
+    const dataStream = DataStream.fromBytes(data);
+    const result = await dwn.processMessage(
+      didKey.did,
+      query.toJSON(),
+      dataStream
+    );
+
+    // const readQuery = await RecordsRead.create({
+    //   data,
+    //   dataFormat: 'application/json',
+    //   published: true,
+    //   protocol: protocol,
+    //   schema: 'notes',
+    //   authorizationSignatureInput: signatureMaterial,
+    // });
+
+    const recordsQuery = await RecordsQuery.create({
+      filter: { schema: 'notes' },
+      dateCreated: new Date().toString(),
+      authorizationSignatureInput: signatureMaterial,
+    });
+
+    const queryResult = await dwn.processMessage(
+      didKey.did,
+      recordsQuery.toJSON()
+    );
+
+    console.log(queryResult);
+
+    const recordsRead = await RecordsRead.create({
+      // recordId: 'bafyreifqktkmvligshhqldlowmqms656zswhggkqu7sv7oekxdtcvatmly',
+      recordId: query.message.recordId,
+      authorizationSignatureInput: signatureMaterial,
+    });
+
+    const readReply = await dwn.processMessage(didKey.did, recordsRead.message);
+    console.log(readReply);
+
+    await dwn.close();
+
+    // const queryQuery = await RecordsQuery.create({
+    //   data,
+    //   dataFormat: 'application/json',
+    //   published: true,
+    //   protocol: protocol,
+    //   schema: 'notes',
+    //   authorizationSignatureInput: signatureMaterial,
+    // });
+  }
+
   async callExtension() {
     const win = globalThis as any;
 
@@ -93,15 +237,44 @@ export class HomeComponent {
       description: 'Music',
     };
 
+    console.log('Sending process message to extension...', todoData);
+
     // record is the DWeb message written to the DWN
-    const { record, result } = await win.web5.dwn.processMessage({
-      method: 'RecordsWrite',
-      data: todoData,
-      message: {
-        schema: 'http://some-schema-registry.org/todo',
+    // const { record, result } = await win.web5.dwn.processMessage({
+    //   method: 'RecordsWrite',
+    //   data: todoData,
+    //   message: {
+    //     schema: 'http://some-schema-registry.org/todo',
+    //     dataFormat: 'application/json',
+    //   },
+    // });
+
+    const result = await win.web5.dwn.processMessage({
+      method: 'RecordsQuery',
+      options: {
         dataFormat: 'application/json',
       },
+      message: {
+        filter: {
+          schema: 'http://some-schema-registry.org/todo',
+        },
+        dateSort: 'createdAscending',
+      },
     });
+
+    // const { record, result } = await win.web5.dwn.processMessage({
+    //   method: 'RecordsWrite',
+    //   options: {
+    //     dataFormat: 'application/json',
+    //   },
+    //   data: {
+    //     id: uuidv4(),
+    //     description: 'Music',
+    //     completed: false,
+    //   },
+    // });
+
+    console.log('Completed calling extension.');
     console.log(result);
 
     // const result = await win.web5.dwn.processMessage({
